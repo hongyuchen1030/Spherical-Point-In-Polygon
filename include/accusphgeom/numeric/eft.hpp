@@ -76,6 +76,43 @@ inline Expansion2<T> compensated_dot_product(const std::array<T, N>& lhs,
 }
 
 
+// -----------------------------------------------------------------------------
+// Accurate scalar triple product.
+// Returns an accurate approximation to
+//
+//   a . (b x c).
+//
+// The cross product b x c is first represented componentwise in two-term
+// form,
+//
+//   (b x c)_k = h_k + l_k,   k = 0,1,2,
+//
+// using three compensated differences of products
+// (accurate_difference_of_products). The final triple product is then
+// evaluated as the compensated dot product
+//
+//   a_0 (h_0 + l_0) + a_1 (h_1 + l_1) + a_2 (h_2 + l_2).
+//
+// This quantity is the determinant det[a, b, c], i.e. the value whose sign
+// the orient3d predicate reports on the sphere, up to the usual geometric
+// interpretation.
+// -----------------------------------------------------------------------------
+template <typename T>
+inline T accurate_triple_product(const Vec3<T>& a, const Vec3<T>& b,
+                                 const Vec3<T>& c) {
+  const Expansion2<T> x =
+      accurate_difference_of_products(b[1], c[2], b[2], c[1]);
+  const Expansion2<T> y =
+      accurate_difference_of_products(b[2], c[0], b[0], c[2]);
+  const Expansion2<T> z =
+      accurate_difference_of_products(b[0], c[1], b[1], c[0]);
+
+  const std::array<T, 6> lhs = {a[0], a[0], a[1], a[1], a[2], a[2]};
+  const std::array<T, 6> rhs = {x.hi, x.lo, y.hi, y.lo, z.hi, z.lo};
+  const Expansion2<T> dot = compensated_dot_product(lhs, rhs);
+  return dot.hi + dot.lo;
+}
+
 template <typename T, std::size_t N>
 inline T accurate_dot_product_fma(const std::array<T, N>& lhs,
                                              const std::array<T, N>& rhs) {
